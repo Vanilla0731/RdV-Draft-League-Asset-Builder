@@ -7,9 +7,7 @@ exportables en PNG haute résolution pour les vidéos.
 
 ## 🎮 Utiliser l'application
 
-**➡️ Ouvre simplement cette page :** `https://TON-PSEUDO.github.io/NOM-DU-DEPOT/`
-*(remplace ce lien par ta vraie URL GitHub Pages après publication — voir
-GUIDE-PUBLICATION.md, puis supprime cette parenthèse)*
+**➡️ Ouvre simplement cette page :** `https://vanilla0731.github.io/RdV-Draft-League-Asset-Builder/`
 
 Aucune installation. Fonctionne sur ordinateur, tablette et mobile.
 Une connexion internet est nécessaire (les images des Pokémon sont
