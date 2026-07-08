@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RdV Draft League Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --c-ink:#0e0f13;
+    --c-panel:#1b1e27;
+    --c-panel-2:#20232d;
+    --c-line:#2a2e3a;
+    --c-gold:#d4a954;
+    --c-gold-dim:#8c7038;
+    --c-text:#edeef2;
+    --c-text-dim:#8a8f9c;
+    --c-danger:#e5484d;
+
+    --hex-w-sm: clamp(76px, 8.4vw, 130px);
+    --hex-h-sm: calc(var(--hex-w-sm) * 1.1547);
+    --hex-w-lg: clamp(150px, 17vw, 224px);
+    --hex-h-lg: calc(var(--hex-w-lg) * 1.1547);
+    --hex-w-md: clamp(96px, 12vw, 150px);
+    --hex-h-md: calc(var(--hex-w-md) * 1.1547);
+    --hex-w-xs: clamp(58px, 6.4vw, 92px);
+    --hex-h-xs: calc(var(--hex-w-xs) * 1.1547);
+    --gap-sm: clamp(10px, 1.4vw, 18px);
+    --gap-xs: clamp(8px, 1vw, 14px);
+
+    --hex-poly: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 50% 8%, rgba(212,169,84,0.10), transparent 60%),
+      var(--c-ink);
+    color:var(--c-text);
+    font-family:'Inter', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:32px 16px 60px;
+  }
+
+  .page{ width:100%; max-width:960px; display:flex; flex-direction:column; align-items:center; }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar-top{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:22px;
+  }
+  .mode-switch{
+    display:flex; gap:4px;
+    background:var(--c-panel);
+    border:1px solid var(--c-line);
+    border-radius:10px;
+    padding:4px;
+  }
+  .mode-btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:12.5px;
+    padding:8px 14px;
+    border-radius:7px;
+    border:none;
+    background:transparent;
+    color:var(--c-text-dim);
+    cursor:pointer;
+    transition:background .18s ease, color .18s ease;
+  }
+  .mode-btn:hover:not(.active){ color:var(--c-text); }
+  .mode-btn.active{ background:var(--c-gold); color:#20160a; }
+
+  .toolbar-actions{ display:flex; gap:10px; }
+  .btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    letter-spacing:.02em;
+    border-radius:8px;
+    padding:10px 16px;
+    cursor:pointer;
+    border:1px solid var(--c-line);
+    background:var(--c-panel);
+    color:var(--c-text);
+    transition:transform .15s ease, border-color .2s ease, background .2s ease;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .btn:hover{ transform:translateY(-1px); border-color:var(--c-gold-dim); }
+  .btn:active{ transform:translateY(0); }
+  .btn-gold{ background:var(--c-gold); border-color:var(--c-gold); color:#20160a; }
+  .btn-gold:hover{ background:#e0b866; border-color:#e0b866; }
+  .btn:focus-visible, .mode-btn:focus-visible, .hex-slot:focus-visible .hex-border, [contenteditable]:focus-visible{
+    outline:2px solid var(--c-gold);
+    outline-offset:2px;
+  }
+
+  /* ---------- Card (exported Area) ---------- */
+  .card{
+    width:100%;
+    background:linear-gradient(180deg, var(--c-panel) 0%, var(--c-panel-2) 100%);
+    border:1px solid var(--c-line);
+    border-radius:20px;
+    padding:clamp(28px, 5vw, 56px) clamp(16px, 5vw, 48px) 44px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.18em;
+    color:var(--c-gold);
+    margin-bottom:14px;
+    text-align:center;
+  }
+
+  .main-title{
+    font-family:'Bebas Neue', sans-serif;
+    font-weight:400;
+    font-size:clamp(34px, 6.4vw, 64px);
+    letter-spacing:.03em;
+    line-height:1.02;
+    text-align:center;
+    margin:0 0 6px;
+    color:var(--c-text);
+    outline:none;
+    max-width:100%;
+    word-break:break-word;
+  }
+  .sub-title{
+    font-family:'Inter', sans-serif;
+    font-weight:500;
+    font-size:clamp(14px, 2vw, 18px);
+    color:var(--c-text-dim);
+    text-align:center;
+    margin:0 0 30px;
+    outline:none;
+  }
+  [contenteditable]:empty::before{
+    content:attr(data-placeholder);
+    color:var(--c-text-dim);
+    opacity:.55;
+  }
+  [contenteditable]{ cursor:text; }
+  [contenteditable]:hover{ background:rgba(255,255,255,0.03); border-radius:6px; }
+
+  /* ---------- Mode views ---------- */
+  .mode-view{ display:none; width:100%; flex-direction:column; align-items:center; }
+  .mode-view.active{ display:flex; }
+
+  /* ---------- Hexagons ---------- */
+  .profile-wrap{ margin-bottom:34px; position:relative; z-index:2; }
+
+  .hex-slot{ position:relative; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .hex-slot--profile-lg{ width:var(--hex-w-lg); height:var(--hex-h-lg); }
+  .hex-slot--profile-md{ width:var(--hex-w-md); height:var(--hex-h-md); }
+  .hex-slot--sm{ width:var(--hex-w-sm); height:var(--hex-h-sm); }
+  .hex-slot--xs{ width:var(--hex-w-xs); height:var(--hex-h-xs); }
+
+  .hex-border{
+    position:relative;
+    width:100%; height:100%;
+    clip-path:var(--hex-poly);
+    background:var(--ring-color, var(--c-line));
+    transition:transform .18s ease, background-color .35s ease;
+  }
+  .hex-slot--is-profile .hex-border{ background:var(--c-gold); }
+  .hex-slot:hover .hex-border{ transform:translateY(-4px) scale(1.035); }
+  .hex-border.is-error{ animation:err-pulse .85s ease; }
+  @keyframes err-pulse{
+    0%,100%{ background:var(--ring-color, var(--c-line)); }
+    30%{ background:var(--c-danger); }
+  }
+  .hex-slot--is-profile .hex-border.is-error{ animation:err-pulse-gold .85s ease; }
+  @keyframes err-pulse-gold{
+    0%,100%{ background:var(--c-gold); }
+    30%{ background:var(--c-danger); }
+  }
+
+  .hex-content{
+    position:absolute; inset:5px;
+    clip-path:var(--hex-poly);
+    background:var(--c-panel);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+
+  /* Image rendering in `background-cover`: centered, fitted, edges
+     cropped if necessary — never stretched. We deliberately do
+     NOT use the `<img>` tag with `object-fit`, because html2canvas (PNG export) ignores
+     `object-fit` and would stretch the images in the exported file. */
+  .hex-img{
+    width:100%; height:100%;
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    display:none;
+  }
+  .hex-img.visible{ display:block; }
+
+  .hex-placeholder{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    color:var(--c-text-dim);
+    pointer-events:none;
+  }
+  .hex-placeholder .plus{ font-size:1.6em; font-weight:300; line-height:1; }
+  .hex-placeholder .hex-label{ font-size:11px; letter-spacing:.05em; text-transform:uppercase; }
+  .hex-slot.filled .hex-placeholder{ display:none; }
+
+  .pick-tag{
+    position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+    background:var(--c-ink);
+    border:1px solid var(--c-line);
+    color:var(--c-gold);
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; font-weight:600; letter-spacing:.04em;
+    padding:2px 7px;
+    border-radius:999px;
+    z-index:3;
+    white-space:nowrap;
+  }
+
+  .clear-btn{
+    position:absolute; top:-6px; right:6px;
+    width:20px; height:20px; border-radius:50%;
+    background:var(--c-ink); border:1px solid var(--c-line);
+    color:var(--c-text-dim);
+    font-size:12px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    opacity:0; transition:opacity .15s ease, color .15s ease, border-color .15s ease;
+    z-index:4;
+  }
+  .hex-slot.filled:hover .clear-btn,
+  .hex-slot.filled:focus-within .clear-btn{ opacity:1; }
+  .clear-btn:hover{ color:var(--c-danger); border-color:var(--c-danger); }
+
+  .spinner{
+    width:22px; height:22px;
+    border:2.5px solid var(--c-line);
+    border-top-color:var(--c-gold);
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+    display:none;
+  }
+  .hex-slot.loading .spinner{ display:block; }
+  .hex-slot.loading .hex-placeholder{ display:none; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- Inline editor ---------- */
+  .hex-editor{
+    position:absolute;
+    top:calc(100% + 10px);
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--c-ink);
+    border:1px solid var(--c-gold-dim);
+    border-radius:10px;
+    padding:9px 10px;
+    z-index:50;
+    box-shadow:0 12px 28px rgba(0,0,0,0.45);
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    width:max-content;
+  }
+  .hex-editor input{
+    width:150px;
+    background:var(--c-panel);
+    border:1px solid var(--c-line);
+    border-radius:6px;
+    color:var(--c-text);
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+    padding:7px 9px;
+    outline:none;
+  }
+  .hex-editor input:focus{ border-color:var(--c-gold); }
+  .hex-editor small{ color:var(--c-text-dim); font-size:10px; line-height:1.3; }
+
+  .hex-suggest{
+    display:none;
+    flex-direction:column;
+    max-height:172px;
+    overflow-y:auto;
+    margin-top:2px;
+    border:1px solid var(--c-line);
+    border-radius:6px;
+    background:var(--c-panel);
+  }
+  .hex-suggest.open{ display:flex; }
+  .hex-suggest button{
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:var(--c-text);
+    font-family:'Inter', sans-serif;
+    font-size:12.5px;
+    padding:6px 9px;
+    cursor:pointer;
+  }
+  .hex-suggest button:hover,
+  .hex-suggest button.highlight{
+    background:var(--c-gold);
+    color:#20160a;
+  }
+  .hex-suggest .suggest-empty{
+    color:var(--c-text-dim);
+    font-size:11px;
+    padding:6px 9px;
+  }
+
+  /* ---------- Draft grid (5+5) ---------- */
+  .team-grid{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin-top:6px;
+    position:relative;
+    z-index:1;
+  }
+  .hex-row{ display:flex; gap:var(--row-gap, var(--gap-sm)); }
+  .hex-row--offset{
+    margin-top:calc(var(--hex-h-sm) * -0.26);
+    transform:translateX(calc((var(--hex-w-sm) + var(--gap-sm)) / 2));
+  }
+  .hex-row--offset-xs{
+    margin-top:calc(var(--hex-h-xs) * -0.26);
+    transform:translateX(calc((var(--hex-w-xs) + var(--gap-xs)) / 2));
+  }
+
+  /* ---------- Encounter Mode ---------- */
+  .match-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    gap:clamp(16px, 4vw, 48px);
+    width:100%;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .player-panel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .player-profile-wrap{ margin-bottom:10px; }
+  .player-name{
+    font-family:'Inter', sans-serif;
+    font-weight:700;
+    font-size:clamp(14px, 2vw, 18px);
+    color:var(--c-text);
+    text-align:center;
+    margin-bottom:22px;
+    outline:none;
+    min-width:60px;
+  }
+  .mini-team{ --row-gap: var(--gap-xs); display:flex; flex-direction:column; align-items:center; }
+  .vs-divider{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:clamp(26px, 4vw, 40px);
+    color:var(--c-gold);
+    letter-spacing:.05em;
+    align-self:center;
+    padding-top:clamp(36px, 7vw, 60px);
+  }
+
+  .hint{
+    margin-top:26px;
+    font-size:13px;
+    color:var(--c-text-dim);
+    text-align:center;
+    max-width:560px;
+    line-height:1.5;
+  }
+  .app-version{
+    margin-top:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:.06em;
+    color:var(--c-text-dim);
+    opacity:.6;
+    text-align:center;
+  }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;
+    bottom:26px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--c-panel);
+    border:1px solid var(--c-line);
+    color:var(--c-text);
+    padding:12px 18px;
+    border-radius:10px;
+    font-size:13.5px;
+    box-shadow:0 12px 30px rgba(0,0,0,0.5);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:200;
+    max-width:90vw;
+    text-align:center;
+  }
+  .toast.error{ border-color:var(--c-danger); }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:640px){
+    .hex-row--offset{
+      margin-top:calc(var(--hex-h-sm) * -0.22);
+      transform:translateX(calc((var(--hex-w-sm) + var(--gap-sm)) / 2.3));
+    }
+    .hex-row--offset-xs{
+      margin-top:calc(var(--hex-h-xs) * -0.22);
+      transform:translateX(calc((var(--hex-w-xs) + var(--gap-xs)) / 2.3));
+    }
+    .match-row{ flex-direction:column; align-items:center; }
+    .vs-divider{ padding:4px 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="page">
+
+    <div class="toolbar-top">
+      <div class="mode-switch" role="tablist">
+        <button class="mode-btn active" data-mode="solo" type="button">Draft Sheet</button>
+        <button class="mode-btn" data-mode="match" type="button">Encounter</button>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn" id="resetAllBtn" type="button">↺ Reset</button>
+        <button class="btn btn-gold" id="exportBtn" type="button">⤓ Export PNG</button>
+      </div>
+    </div>
+
+    <div class="card" id="exportCard">
+      <div class="eyebrow">RDV DRAFT LEAGUE · POKÉMON CHAMPIONS</div>
+      <h1 class="main-title" id="mainTitle" contenteditable="true" data-placeholder="TITLE">RDV TITLE.</h1>
+      <h2 class="sub-title" id="subTitle" contenteditable="true" data-placeholder="Subtile">SUBTITLE</h2>
+
+      <div class="mode-view active" id="soloView">
+        <div class="profile-wrap" id="soloProfileWrap"></div>
+        <div class="team-grid" id="teamGrid"></div>
+      </div>
+
+      <div class="mode-view" id="matchView">
+        <div class="match-row" id="matchRow"></div>
+      </div>
+    </div>
+
+    <p class="hint">Clique sur un hexagone pour saisir le nom anglais d'un Pokémon, puis valide avec <strong>Entrée</strong>. Clique sur un hexagone doré pour ajouter une photo.</p>
+    <p class="app-version">RdV Draft League Builder · v0.0.4</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const mainTitleEl = document.getElementById('mainTitle');
+  const subTitleEl = document.getElementById('subTitle');
+  /* Les valeurs de réinitialisation sont lues depuis le HTML au chargement :
+     modifier les textes par défaut dans le <body> suffit, sans toucher au JS. */
+  const DEFAULT_MAIN_TITLE = mainTitleEl.textContent;
+  const DEFAULT_SUB_TITLE = subTitleEl.textContent;
+
+  const TYPE_COLORS = {
+    normal:"#A8A878", fire:"#F08030", water:"#6890F0", electric:"#F8D030",
+    grass:"#78C850", ice:"#98D8D8", fighting:"#C03028", poison:"#A040A0",
+    ground:"#E0C068", flying:"#A890F0", psychic:"#F85888", bug:"#A8B820",
+    rock:"#B8A038", ghost:"#705898", dragon:"#7038F8", dark:"#705848",
+    steel:"#B8B8D0", fairy:"#EE99AC"
+  };
+
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+
+  function showToast(msg, isError){
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('error', !!isError);
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3600);
+  }
+
+  function normalizeName(raw){
+    return raw
+      .trim()
+      .toLowerCase()
+      .replace(/♀/g, '-f')
+      .replace(/♂/g, '-m')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.:'’]/g, '')
+      .replace(/\s+/g, '-');
+  }
+
+  /* Applique une image dans un hexagone en background-cover :
+     centrée, ajustée, bords tronqués si nécessaire — jamais étirée. */
+  function setHexImage(el, url, label){
+    el.style.backgroundImage = 'url("' + url + '")';
+    if(label) el.setAttribute('aria-label', label);
+    el.classList.add('visible');
+  }
+  function clearHexImage(el){
+    el.style.removeProperty('background-image');
+    el.removeAttribute('aria-label');
+    el.classList.remove('visible');
+  }
+
+  /* Liste complète des noms (pour l'autocomplétion), chargée une seule fois. */
+  let allNamesPromise = null;
+  function ensureAllNames(){
+    if(!allNamesPromise){
+      allNamesPromise = fetch('https://pokeapi.co/api/v2/pokemon?limit=20000')
+        .then(res => { if(!res.ok) throw new Error('network'); return res.json(); })
+        .then(data => data.results.map(p => p.name))
+        .catch(err => {
+          allNamesPromise = null; // on retentera au prochain appel
+          throw err;
+        });
+    }
+    return allNamesPromise;
+  }
+
+  async function safeFetch(url){
+    let res;
+    try{
+      res = await fetch(url);
+    }catch(networkErr){
+      throw new Error('network');
+    }
+    return res;
+  }
+
+  function extractImage(data){
+    const artwork = data.sprites &&
+      data.sprites.other &&
+      data.sprites.other['official-artwork'] &&
+      data.sprites.other['official-artwork'].front_default;
+    const img = artwork || (data.sprites && data.sprites.front_default) || null;
+    const type = (data.types && data.types[0] && data.types[0].type.name) || null;
+    return { img, type };
+  }
+
+  async function fetchPokemon(rawName){
+    const slug = normalizeName(rawName);
+    if(!slug) throw new Error('empty');
+
+    let res = await safeFetch('https://pokeapi.co/api/v2/pokemon/' + encodeURIComponent(slug));
+
+    if(res.status === 404){
+      /* Certains Pokémon n'existent que sous le nom de leur forme par défaut
+         (ex : "mimikyu" -> "mimikyu-disguised"). On passe par l'endpoint
+         espèce pour retrouver cette forme automatiquement. */
+      const sres = await safeFetch('https://pokeapi.co/api/v2/pokemon-species/' + encodeURIComponent(slug));
+      if(sres.status === 404) throw new Error('not-found');
+      if(!sres.ok) throw new Error('network');
+      const sdata = await sres.json();
+      const variety = (sdata.varieties || []).find(v => v.is_default) || (sdata.varieties || [])[0];
+      if(!variety || !variety.pokemon || !variety.pokemon.url) throw new Error('not-found');
+      res = await safeFetch(variety.pokemon.url);
+      if(res.status === 404) throw new Error('not-found');
+    }
+    if(!res.ok) throw new Error('network');
+    const data = await res.json();
+    const picked = extractImage(data);
+    if(picked.img) return { img: picked.img, type: picked.type, name: data.name };
+
+    /* Aucune image pour cette entrée : c'est le cas des formes purement
+       utilitaires, comme les modes de monture de Miraidon
+       (miraidon-low-power-mode, -drive-mode, -aquatic-mode, -glide-mode)
+       ou les builds de Koraidon. Elles existent dans la base mais tous
+       leurs champs de sprites sont null. On retombe alors automatiquement
+       sur la forme par défaut de l'espèce. */
+    if(data.species && data.species.url){
+      const spRes = await safeFetch(data.species.url);
+      if(spRes.ok){
+        const spData = await spRes.json();
+        const defVariety = (spData.varieties || []).find(v => v.is_default);
+        if(defVariety && defVariety.pokemon && defVariety.pokemon.name !== data.name){
+          const defRes = await safeFetch(defVariety.pokemon.url);
+          if(defRes.ok){
+            const defData = await defRes.json();
+            const defPicked = extractImage(defData);
+            if(defPicked.img){
+              return {
+                img: defPicked.img,
+                type: defPicked.type,
+                name: defData.name,
+                fallbackFrom: data.name
+              };
+            }
+          }
+        }
+      }
+    }
+    throw new Error('no-image');
+  }
+
+  /* ---------- Creating hexagon "Pokemon" ---------- */
+  function createTeamSlot(sizeClass, tagText){
+    const slot = document.createElement('div');
+    slot.className = 'hex-slot ' + sizeClass;
+    slot.tabIndex = 0;
+    slot.title = 'Cliquer pour saisir un Pokémon';
+
+    slot.innerHTML = `
+      ${tagText ? `<span class="pick-tag">${tagText}</span>` : ''}
+      <div class="hex-border">
+        <div class="hex-content">
+          <div class="hex-img" role="img"></div>
+          <div class="hex-placeholder">
+            <span class="plus">+</span>
+          </div>
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <button class="clear-btn" type="button" title="Retirer ce Pokémon">✕</button>
+    `;
+
+    const border = slot.querySelector('.hex-border');
+    const img = slot.querySelector('.hex-img');
+    const clearBtn = slot.querySelector('.clear-btn');
+
+    function flashError(){
+      border.classList.add('is-error');
+      setTimeout(() => border.classList.remove('is-error'), 850);
+    }
+
+    function openEditor(){
+      if(slot.querySelector('.hex-editor')) return;
+      const editor = document.createElement('div');
+      editor.className = 'hex-editor';
+      editor.innerHTML = `
+        <input type="text" placeholder="Nom anglais (ex : ferrothorn)" autocomplete="off" spellcheck="false">
+        <div class="hex-suggest"></div>
+        <small>Entrée pour valider · ↑↓ pour naviguer · Échap pour annuler</small>
+      `;
+      slot.appendChild(editor);
+      const input = editor.querySelector('input');
+      const suggestBox = editor.querySelector('.hex-suggest');
+      if(slot.dataset.name) input.value = slot.dataset.name;
+      input.focus();
+      input.select();
+
+      let highlightIndex = -1;
+      let currentItems = [];
+
+      function close(){ editor.remove(); }
+
+      function renderSuggestions(items, message){
+        suggestBox.innerHTML = '';
+        currentItems = items;
+        highlightIndex = -1;
+        if(message){
+          const div = document.createElement('div');
+          div.className = 'suggest-empty';
+          div.textContent = message;
+          suggestBox.appendChild(div);
+          suggestBox.classList.add('open');
+          return;
+        }
+        if(items.length === 0){
+          suggestBox.classList.remove('open');
+          return;
+        }
+        items.forEach((name) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = name;
+          /* mousedown plutôt que click : se déclenche avant le blur de l'input */
+          btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+            submitName(name);
+          });
+          suggestBox.appendChild(btn);
+        });
+        suggestBox.classList.add('open');
+      }
+
+      function updateHighlight(){
+        const buttons = suggestBox.querySelectorAll('button');
+        buttons.forEach((b, i) => b.classList.toggle('highlight', i === highlightIndex));
+        if(highlightIndex >= 0 && buttons[highlightIndex]){
+          buttons[highlightIndex].scrollIntoView({ block: 'nearest' });
+        }
+      }
+
+      async function refreshSuggestions(){
+        const q = normalizeName(input.value);
+        if(q.length < 2){
+          renderSuggestions([]);
+          return;
+        }
+        let names;
+        try{
+          names = await ensureAllNames();
+        }catch(err){
+          renderSuggestions([], 'Suggestions indisponibles (hors ligne ou environnement sandboxé)');
+          return;
+        }
+        /* Le contenu du champ a pu changer pendant le chargement de la liste */
+        if(normalizeName(input.value) !== q) return;
+        const starts = [];
+        const contains = [];
+        for(const name of names){
+          if(name.startsWith(q)) starts.push(name);
+          else if(name.includes(q)) contains.push(name);
+          if(starts.length >= 8) break;
+        }
+        renderSuggestions(starts.concat(contains).slice(0, 8));
+      }
+
+      input.addEventListener('input', refreshSuggestions);
+
+      input.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if(e.key === 'ArrowDown'){
+          e.preventDefault();
+          if(currentItems.length){
+            highlightIndex = (highlightIndex + 1) % currentItems.length;
+            updateHighlight();
+          }
+        } else if(e.key === 'ArrowUp'){
+          e.preventDefault();
+          if(currentItems.length){
+            highlightIndex = (highlightIndex - 1 + currentItems.length) % currentItems.length;
+            updateHighlight();
+          }
+        } else if(e.key === 'Enter'){
+          const chosen = (highlightIndex >= 0 && currentItems[highlightIndex])
+            ? currentItems[highlightIndex]
+            : input.value.trim();
+          close();
+          if(chosen) submitName(chosen);
+        } else if(e.key === 'Escape'){
+          close();
+        }
+      });
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('blur', () => setTimeout(close, 120));
+
+      /* Pre-loading the list of names while opening the editor for the first time */
+      ensureAllNames().catch(() => {});
+    }
+
+    async function submitName(name){
+      slot.classList.add('loading');
+      let result;
+      try{
+        result = await fetchPokemon(name);
+      }catch(err){
+        slot.classList.remove('loading');
+        flashError();
+        if(err.message === 'not-found'){
+          showToast(`Pokémon introuvable : « ${name} ». Vérifie l'orthographe (ex : "ferrothorn", "mr-mime", "tapu-koko").`, true);
+        }else if(err.message === 'no-image'){
+          showToast(`« ${name} » existe dans la base mais ne possède aucune image dans PokeAPI (forme purement utilitaire, comme un mode de monture). Essaie une autre forme de ce Pokémon.`, true);
+        }else if(err.message === 'empty'){
+          // rien saisi, on ignore silencieusement
+        }else{
+          showToast("Connexion à PokeAPI impossible ici. Vérifie ta connexion internet.", true);
+        }
+        console.error('[Draft League Builder] échec récupération Pokémon "' + name + '":', err);
+        return;
+      }
+
+      /* Preload using an Image object to preserve
+         	success/failure detection, then display as a background-cover (undistorted,
+         	including in the PNG export). */
+      const preloader = new Image();
+      preloader.onload = () => {
+        setHexImage(img, result.img, result.name);
+        slot.classList.add('filled');
+        slot.dataset.name = result.name;
+        const color = TYPE_COLORS[result.type];
+        if(color) border.style.setProperty('--ring-color', color);
+        slot.title = 'Cliquer pour changer ce Pokémon';
+        slot.classList.remove('loading');
+        if(result.fallbackFrom){
+          showToast(`« ${result.fallbackFrom} » n'a pas d'image propre dans PokeAPI — artwork de « ${result.name} » affiché à la place.`);
+        }
+      };
+      preloader.onerror = () => {
+        slot.classList.remove('loading');
+        flashError();
+        showToast("L'image de ce Pokémon n'a pas pu être chargée (réseau ou image indisponible). Réessaie.", true);
+        console.error('[Draft League Builder] échec chargement image pour "' + result.name + '"');
+      };
+      preloader.src = result.img;
+    }
+
+    function clearSlot(){
+      clearHexImage(img);
+      slot.classList.remove('filled');
+      delete slot.dataset.name;
+      border.style.removeProperty('--ring-color');
+      slot.title = 'Cliquer pour saisir un Pokémon';
+    }
+
+    slot.addEventListener('click', (e) => {
+      if(e.target.closest('.clear-btn')) return;
+      openEditor();
+    });
+    slot.addEventListener('keydown', (e) => {
+      if((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.hex-editor')){
+        e.preventDefault();
+        openEditor();
+      }
+    });
+    clearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearSlot();
+    });
+
+    return slot;
+  }
+
+  /* ---------- Creating "profile picture" hexagon ---------- */
+  function createProfileSlot(sizeClass){
+    const slot = document.createElement('div');
+    slot.className = 'hex-slot hex-slot--is-profile ' + sizeClass;
+    slot.tabIndex = 0;
+    slot.title = 'Cliquer pour ajouter une photo';
+
+    slot.innerHTML = `
+      <div class="hex-border">
+        <div class="hex-content">
+          <div class="hex-img" role="img" aria-label="Photo de profil"></div>
+          <div class="hex-placeholder">
+            <span class="plus">+</span>
+            <span class="hex-label">Photo</span>
+          </div>
+        </div>
+      </div>
+      <button class="clear-btn" type="button" title="Retirer la photo">✕</button>
+      <input type="file" accept="image/*" hidden>
+    `;
+
+    const img = slot.querySelector('.hex-img');
+    const fileInput = slot.querySelector('input[type="file"]');
+    const clearBtn = slot.querySelector('.clear-btn');
+
+    slot.addEventListener('click', (e) => {
+      if(e.target.closest('.clear-btn')) return;
+      fileInput.click();
+    });
+    slot.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        setHexImage(img, reader.result, 'Photo de profil');
+        slot.classList.add('filled');
+      };
+      reader.readAsDataURL(file);
+    });
+    clearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearHexImage(img);
+      slot.classList.remove('filled');
+      fileInput.value = '';
+    });
+
+    return slot;
+  }
+
+  /* ---------- Building : Draft mode (1 profile + 10 Pokémon) ---------- */
+  document.getElementById('soloProfileWrap').appendChild(createProfileSlot('hex-slot--profile-lg'));
+
+  const teamGrid = document.getElementById('teamGrid');
+  const row1 = document.createElement('div');
+  row1.className = 'hex-row';
+  const row2 = document.createElement('div');
+  row2.className = 'hex-row hex-row--offset';
+
+  function pad(n){ return String(n).padStart(2, '0'); }
+
+  for(let i = 0; i < 5; i++) row1.appendChild(createTeamSlot('hex-slot--sm', 'PICK ' + pad(i + 1)));
+  for(let i = 5; i < 10; i++) row2.appendChild(createTeamSlot('hex-slot--sm', 'PICK ' + pad(i + 1)));
+
+  teamGrid.appendChild(row1);
+  teamGrid.appendChild(row2);
+
+  /* ---------- Building : Encounter mode (2 players x 6 Pokemon) ---------- */
+  function buildPlayerPanel(defaultName){
+    const panel = document.createElement('div');
+    panel.className = 'player-panel';
+
+    const profileWrap = document.createElement('div');
+    profileWrap.className = 'player-profile-wrap';
+    profileWrap.appendChild(createProfileSlot('hex-slot--profile-md'));
+    panel.appendChild(profileWrap);
+
+    const name = document.createElement('div');
+    name.className = 'player-name';
+    name.contentEditable = 'true';
+    name.dataset.placeholder = defaultName;
+    panel.appendChild(name);
+
+    const teamWrap = document.createElement('div');
+    teamWrap.className = 'mini-team';
+    const r1 = document.createElement('div'); r1.className = 'hex-row';
+    const r2 = document.createElement('div'); r2.className = 'hex-row hex-row--offset-xs';
+    for(let i = 0; i < 3; i++) r1.appendChild(createTeamSlot('hex-slot--xs', null));
+    for(let i = 0; i < 3; i++) r2.appendChild(createTeamSlot('hex-slot--xs', null));
+    teamWrap.appendChild(r1);
+    teamWrap.appendChild(r2);
+    panel.appendChild(teamWrap);
+
+    return panel;
+  }
+
+  const matchRow = document.getElementById('matchRow');
+  matchRow.appendChild(buildPlayerPanel('Trainer A'));
+  const vsDivider = document.createElement('div');
+  vsDivider.className = 'vs-divider';
+  vsDivider.textContent = 'VS';
+  matchRow.appendChild(vsDivider);
+  matchRow.appendChild(buildPlayerPanel('Trainer B'));
+
+  /* ---------- Titles / editable names ---------- */
+  document.querySelectorAll('[contenteditable]').forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+  });
+
+  /* ---------- Switch Draft / Encounter ---------- */
+  const modeButtons = document.querySelectorAll('.mode-btn');
+  const soloView = document.getElementById('soloView');
+  const matchView = document.getElementById('matchView');
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const isMatch = btn.dataset.mode === 'match';
+      soloView.classList.toggle('active', !isMatch);
+      matchView.classList.toggle('active', isMatch);
+    });
+  });
+
+  /* ---------- Reset ---------- */
+  document.getElementById('resetAllBtn').addEventListener('click', () => {
+    mainTitleEl.textContent = DEFAULT_MAIN_TITLE;
+    subTitleEl.textContent = DEFAULT_SUB_TITLE;
+    document.querySelectorAll('.hex-slot.filled .clear-btn').forEach(btn => btn.click());
+    document.querySelectorAll('.player-name').forEach(n => { n.textContent = ''; });
+    showToast('Fiche réinitialisée.');
+  });
+
+  /* ---------- Export PNG ---------- */
+  document.getElementById('exportBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('exportBtn');
+    const original = btn.textContent;
+    btn.textContent = '⏳ Export en cours…';
+    btn.disabled = true;
+    try{
+      const canvas = await html2canvas(document.getElementById('exportCard'), {
+        backgroundColor: null,
+        useCORS: true,
+        scale: 2
+      });
+      const title = mainTitleEl.textContent.trim();
+      const filename = (title ? title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') : 'draft-league-visuel') + '.png';
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }catch(err){
+      showToast('Export impossible : ' + err.message, true);
+      console.error('[Draft League Builder] échec export PNG:', err);
+    }finally{
+      btn.textContent = original;
+      btn.disabled = false;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
