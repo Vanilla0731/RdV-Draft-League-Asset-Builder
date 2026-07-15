@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --c-ink:#0e0f13;
@@ -109,7 +108,7 @@
     outline-offset:2px;
   }
 
-  /* ---------- Card (exported Area) ---------- */
+  /* ---------- Card (zone exportée) ---------- */
   .card{
     width:100%;
     background:linear-gradient(180deg, var(--c-panel) 0%, var(--c-panel-2) 100%);
@@ -165,7 +164,7 @@
   .mode-view{ display:none; width:100%; flex-direction:column; align-items:center; }
   .mode-view.active{ display:flex; }
 
-  /* ---------- Hexagons ---------- */
+  /* ---------- Hexagones (génériques) ---------- */
   .profile-wrap{ margin-bottom:34px; position:relative; z-index:2; }
 
   .hex-slot{ position:relative; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -202,10 +201,10 @@
     overflow:hidden;
   }
 
-  /* Image rendering in `background-cover`: centered, fitted, edges
-     cropped if necessary — never stretched. We deliberately do
-     NOT use the `<img>` tag with `object-fit`, because html2canvas (PNG export) ignores
-     `object-fit` and would stretch the images in the exported file. */
+  /* Rendu des images en background-cover : centrées, ajustées, bords
+     tronqués si nécessaire — jamais étirées. L'export PNG n'utilise pas
+     ce DOM : il est dessiné par un moteur canvas dédié (voir la section
+     Export PNG du script) qui reproduit le même cadrage "cover". */
   .hex-img{
     width:100%; height:100%;
     background-size:cover;
@@ -264,7 +263,7 @@
   .hex-slot.loading .hex-placeholder{ display:none; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
-  /* ---------- Inline editor ---------- */
+  /* ---------- Editeur inline (saisie nom pokemon) ---------- */
   .hex-editor{
     position:absolute;
     top:calc(100% + 10px);
@@ -327,7 +326,7 @@
     padding:6px 9px;
   }
 
-  /* ---------- Draft grid (5+5) ---------- */
+  /* ---------- Grille solo (nid d'abeille 5+5) ---------- */
   .team-grid{
     display:flex;
     flex-direction:column;
@@ -346,7 +345,7 @@
     transform:translateX(calc((var(--hex-w-xs) + var(--gap-xs)) / 2));
   }
 
-  /* ---------- Encounter Mode ---------- */
+  /* ---------- Mode Face-à-face ---------- */
   .match-row{
     display:flex;
     align-items:flex-start;
@@ -471,7 +470,7 @@
     </div>
 
     <p class="hint">Clique sur un hexagone pour saisir le nom anglais d'un Pokémon, puis valide avec <strong>Entrée</strong>. Clique sur un hexagone doré pour ajouter une photo.</p>
-    <p class="app-version">RdV Draft League Builder · v0.0.4</p>
+    <p class="app-version">RdV Draft League Builder · v0.0.5</p>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -620,7 +619,7 @@
     throw new Error('no-image');
   }
 
-  /* ---------- Creating hexagon "Pokemon" ---------- */
+  /* ---------- Fabrique d'un hexagone "Pokémon" ---------- */
   function createTeamSlot(sizeClass, tagText){
     const slot = document.createElement('div');
     slot.className = 'hex-slot ' + sizeClass;
@@ -765,7 +764,7 @@
       input.addEventListener('click', (e) => e.stopPropagation());
       input.addEventListener('blur', () => setTimeout(close, 120));
 
-      /* Pre-loading the list of names while opening the editor for the first time */
+      /* Pré-charge la liste des noms dès l'ouverture de l'éditeur */
       ensureAllNames().catch(() => {});
     }
 
@@ -778,21 +777,21 @@
         slot.classList.remove('loading');
         flashError();
         if(err.message === 'not-found'){
-          showToast(`Pokémon introuvable : « ${name} ». Vérifie l'orthographe (ex : "ferrothorn", "mr-mime", "tapu-koko").`, true);
+          showToast(`Pokémon introuvable : « ${name} ». Vérifie l'orthographe anglaise (ex : "ferrothorn", "mr-mime", "tapu-koko").`, true);
         }else if(err.message === 'no-image'){
-          showToast(`« ${name} » existe dans la base mais ne possède aucune image dans PokeAPI (forme purement utilitaire, comme un mode de monture). Essaie une autre forme de ce Pokémon.`, true);
+          showToast(`« ${name} » existe dans la base mais ne possède aucune image dans PokéAPI (forme purement utilitaire, comme un mode de monture). Essaie une autre forme de ce Pokémon.`, true);
         }else if(err.message === 'empty'){
           // rien saisi, on ignore silencieusement
         }else{
-          showToast("Connexion à PokeAPI impossible ici. Vérifie ta connexion internet.", true);
+          showToast("Connexion à PokéAPI impossible ici. Si tu es dans l'aperçu intégré de Claude.ai, ouvre le fichier téléchargé directement dans ton navigateur (double-clic) : le sandbox de l'aperçu bloque les appels réseau externes. Sinon, vérifie ta connexion internet.", true);
         }
         console.error('[Draft League Builder] échec récupération Pokémon "' + name + '":', err);
         return;
       }
 
-      /* Preload using an Image object to preserve
-         	success/failure detection, then display as a background-cover (undistorted,
-         	including in the PNG export). */
+      /* Pré-chargement via un objet Image pour conserver la détection
+         de succès/échec, puis affichage en background-cover (non déformé,
+         y compris dans l'export PNG). */
       const preloader = new Image();
       preloader.onload = () => {
         setHexImage(img, result.img, result.name);
@@ -803,7 +802,7 @@
         slot.title = 'Cliquer pour changer ce Pokémon';
         slot.classList.remove('loading');
         if(result.fallbackFrom){
-          showToast(`« ${result.fallbackFrom} » n'a pas d'image propre dans PokeAPI — artwork de « ${result.name} » affiché à la place.`);
+          showToast(`« ${result.fallbackFrom} » n'a pas d'image propre dans PokéAPI — artwork de « ${result.name} » affiché à la place.`);
         }
       };
       preloader.onerror = () => {
@@ -841,7 +840,7 @@
     return slot;
   }
 
-  /* ---------- Creating "profile picture" hexagon ---------- */
+  /* ---------- Fabrique d'un hexagone "photo de profil" ---------- */
   function createProfileSlot(sizeClass){
     const slot = document.createElement('div');
     slot.className = 'hex-slot hex-slot--is-profile ' + sizeClass;
@@ -896,7 +895,7 @@
     return slot;
   }
 
-  /* ---------- Building : Draft mode (1 profile + 10 Pokémon) ---------- */
+  /* ---------- Construction : mode solo (1 profil + 10 Pokémon) ---------- */
   document.getElementById('soloProfileWrap').appendChild(createProfileSlot('hex-slot--profile-lg'));
 
   const teamGrid = document.getElementById('teamGrid');
@@ -913,7 +912,7 @@
   teamGrid.appendChild(row1);
   teamGrid.appendChild(row2);
 
-  /* ---------- Building : Encounter mode (2 players x 6 Pokemon) ---------- */
+  /* ---------- Construction : mode Face-à-face (2 joueurs x 6 Pokémon) ---------- */
   function buildPlayerPanel(defaultName){
     const panel = document.createElement('div');
     panel.className = 'player-panel';
@@ -950,7 +949,7 @@
   matchRow.appendChild(vsDivider);
   matchRow.appendChild(buildPlayerPanel('Trainer B'));
 
-  /* ---------- Titles / editable names ---------- */
+  /* ---------- Titres / noms éditables ---------- */
   document.querySelectorAll('[contenteditable]').forEach(el => {
     el.addEventListener('keydown', (e) => {
       if(e.key === 'Enter'){ e.preventDefault(); el.blur(); }
@@ -962,7 +961,7 @@
     });
   });
 
-  /* ---------- Switch Draft / Encounter ---------- */
+  /* ---------- Bascule Solo / Face-à-face ---------- */
   const modeButtons = document.querySelectorAll('.mode-btn');
   const soloView = document.getElementById('soloView');
   const matchView = document.getElementById('matchView');
@@ -976,7 +975,7 @@
     });
   });
 
-  /* ---------- Reset ---------- */
+  /* ---------- Réinitialisation ---------- */
   document.getElementById('resetAllBtn').addEventListener('click', () => {
     mainTitleEl.textContent = DEFAULT_MAIN_TITLE;
     subTitleEl.textContent = DEFAULT_SUB_TITLE;
@@ -985,18 +984,323 @@
     showToast('Fiche réinitialisée.');
   });
 
-  /* ---------- Export PNG ---------- */
+  /* ---------- Export PNG : moteur de rendu canvas dédié ----------
+     Pourquoi ne pas capturer le DOM (html2canvas & co) ? Deux raisons :
+     1. la mise en page à l'écran est responsive (unités vw), donc la
+        capture dépendait de la taille de la fenêtre ;
+     2. html2canvas ne supporte pas clip-path : les hexagones
+        ressortaient en carrés.
+     Ici, la fiche est redessinée de zéro sur un canvas aux dimensions
+     FIXES (largeur logique 960 px × échelle 2 = PNG de 1920 px de large),
+     avec de vrais tracés hexagonaux et un cadrage d'image "cover". */
+
+  const EXPORT_STYLE = {
+    scale: 2, W: 960, padX: 48, padTop: 56, padBottom: 44, radius: 20,
+    ink: '#0e0f13', panel: '#1b1e27', panel2: '#20232d', line: '#2a2e3a',
+    gold: '#d4a954', text: '#edeef2', dim: '#8a8f9c',
+    hexRatio: 1.1547,
+    hexInset: 5,
+    hex: { lg: 224, md: 150, sm: 130, xs: 92 },
+    gap: { sm: 18, xs: 14 }
+  };
+
+  function hexTracePath(ctx, x, y, w, h){
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w, y + h * 0.25);
+    ctx.lineTo(x + w, y + h * 0.75);
+    ctx.lineTo(x + w / 2, y + h);
+    ctx.lineTo(x, y + h * 0.75);
+    ctx.lineTo(x, y + h * 0.25);
+    ctx.closePath();
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /* Dessine l'image en "cover" : centrée, remplissant la zone,
+     bords tronqués si les proportions diffèrent — jamais étirée. */
+  function drawCoverImage(ctx, image, x, y, w, h){
+    const iw = image.naturalWidth || image.width;
+    const ih = image.naturalHeight || image.height;
+    if(!iw || !ih) return;
+    const imgRatio = iw / ih;
+    const boxRatio = w / h;
+    let sx = 0, sy = 0, sw = iw, sh = ih;
+    if(imgRatio > boxRatio){
+      sw = ih * boxRatio;
+      sx = (iw - sw) / 2;
+    } else {
+      sh = iw / boxRatio;
+      sy = (ih - sh) / 2;
+    }
+    ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function wrapText(ctx, text, maxWidth){
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+    for(const word of words){
+      const test = line ? line + ' ' + word : word;
+      if(!line || ctx.measureText(test).width <= maxWidth){
+        line = test;
+      } else {
+        lines.push(line);
+        line = word;
+      }
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+
+  function loadImageForExport(url){
+    return new Promise((resolve) => {
+      const im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = () => resolve(im);
+      im.onerror = () => resolve(null);
+      im.src = url;
+    });
+  }
+
+  function slotImageUrl(slot){
+    const el = slot.querySelector('.hex-img');
+    const m = /url\(["']?(.+?)["']?\)/.exec((el && el.style.backgroundImage) || '');
+    return m ? m[1] : null;
+  }
+
+  function collectSlotState(slot){
+    const tagEl = slot.querySelector('.pick-tag');
+    return {
+      url: slotImageUrl(slot),
+      ring: (slot.querySelector('.hex-border').style.getPropertyValue('--ring-color') || '').trim() || null,
+      tag: tagEl ? tagEl.textContent : null,
+      isProfile: slot.classList.contains('hex-slot--is-profile'),
+      image: null
+    };
+  }
+
+  function drawHexSlot(ctx, state, x, y, w){
+    const C = EXPORT_STYLE;
+    const h = w * C.hexRatio;
+    hexTracePath(ctx, x, y, w, h);
+    ctx.fillStyle = state.ring || (state.isProfile ? C.gold : C.line);
+    ctx.fill();
+    const i = C.hexInset;
+    const ix = x + i, iy = y + i, iw = w - 2 * i, ih = h - 2 * i;
+    hexTracePath(ctx, ix, iy, iw, ih);
+    ctx.fillStyle = C.panel;
+    ctx.fill();
+    if(state.image){
+      ctx.save();
+      hexTracePath(ctx, ix, iy, iw, ih);
+      ctx.clip();
+      drawCoverImage(ctx, state.image, ix, iy, iw, ih);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = C.dim;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '300 ' + Math.max(20, Math.round(w * 0.2)) + 'px Inter, sans-serif';
+      if(state.isProfile){
+        ctx.fillText('+', x + w / 2, y + h / 2 - 10);
+        ctx.font = '400 11px Inter, sans-serif';
+        ctx.fillText('PHOTO', x + w / 2, y + h / 2 + 14);
+      } else {
+        ctx.fillText('+', x + w / 2, y + h / 2);
+      }
+    }
+  }
+
+  function drawPickTag(ctx, centerX, hexTopY, text){
+    const C = EXPORT_STYLE;
+    ctx.font = '600 10px "JetBrains Mono", monospace';
+    const tw = ctx.measureText(text).width;
+    const pillW = tw + 16, pillH = 17;
+    const x = centerX - pillW / 2, y = hexTopY - 9;
+    roundRectPath(ctx, x, y, pillW, pillH, pillH / 2);
+    ctx.fillStyle = C.ink;
+    ctx.fill();
+    ctx.strokeStyle = C.line;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = C.gold;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, centerX, y + pillH / 2 + 0.5);
+  }
+
+  async function renderExportCanvas(){
+    const C = EXPORT_STYLE;
+    const isMatch = matchView.classList.contains('active');
+    const innerW = C.W - 2 * C.padX;
+    const cx = C.W / 2;
+    const smH = C.hex.sm * C.hexRatio;
+    const xsH = C.hex.xs * C.hexRatio;
+    const lgH = C.hex.lg * C.hexRatio;
+    const mdH = C.hex.md * C.hexRatio;
+
+    try{ await document.fonts.ready; }catch(e){ /* polices système en secours */ }
+
+    /* 1. Collecte de l'état affiché depuis le DOM */
+    let soloData = null, matchData = null;
+    if(!isMatch){
+      soloData = {
+        profile: collectSlotState(soloView.querySelector('.hex-slot--is-profile')),
+        team: Array.from(soloView.querySelectorAll('.hex-slot--sm')).map(collectSlotState)
+      };
+    } else {
+      matchData = Array.from(matchView.querySelectorAll('.player-panel')).map(panel => ({
+        profile: collectSlotState(panel.querySelector('.hex-slot--is-profile')),
+        name: panel.querySelector('.player-name').textContent.trim(),
+        team: Array.from(panel.querySelectorAll('.hex-slot--xs')).map(collectSlotState)
+      }));
+    }
+    const allSlots = isMatch
+      ? matchData.flatMap(p => [p.profile].concat(p.team))
+      : [soloData.profile].concat(soloData.team);
+    await Promise.all(allSlots.map(async s => {
+      if(s.url) s.image = await loadImageForExport(s.url);
+    }));
+
+    /* 2. Mesures des textes d'en-tête */
+    const scratch = document.createElement('canvas').getContext('2d');
+    const eyebrowText = document.querySelector('.eyebrow').textContent.trim();
+    const titleText = mainTitleEl.textContent.trim();
+    const subText = subTitleEl.textContent.trim();
+    scratch.font = '400 64px "Bebas Neue", sans-serif';
+    const titleLines = titleText ? wrapText(scratch, titleText, innerW) : [];
+    scratch.font = '500 18px Inter, sans-serif';
+    const subLines = subText ? wrapText(scratch, subText, innerW) : [];
+
+    /* 3. Hauteur totale (fixe pour un contenu donné, indépendante de la fenêtre) */
+    let y = C.padTop;
+    if(eyebrowText) y += 12 + 14;
+    if(titleLines.length) y += titleLines.length * 65 + 6;
+    y += subLines.length * 27;
+    y += 30;
+    const contentTop = y;
+    let H;
+    if(!isMatch){
+      const gridH = smH * 2 - smH * 0.26;
+      H = Math.round(contentTop + lgH + 34 + gridH + C.padBottom);
+    } else {
+      const miniGridH = xsH * 2 - xsH * 0.26;
+      H = Math.round(contentTop + mdH + 10 + 22 + 22 + miniGridH + C.padBottom);
+    }
+
+    /* 4. Dessin */
+    const cv = document.createElement('canvas');
+    cv.width = C.W * C.scale;
+    cv.height = H * C.scale;
+    const ctx = cv.getContext('2d');
+    ctx.scale(C.scale, C.scale);
+    const supportsLS = 'letterSpacing' in ctx;
+
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, C.panel);
+    grad.addColorStop(1, C.panel2);
+    roundRectPath(ctx, 0.5, 0.5, C.W - 1, H - 1, C.radius);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = C.line;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    let ty = C.padTop;
+    if(eyebrowText){
+      ctx.font = '600 12px "JetBrains Mono", monospace';
+      if(supportsLS) ctx.letterSpacing = '2.16px';
+      ctx.fillStyle = C.gold;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(eyebrowText, cx, ty);
+      if(supportsLS) ctx.letterSpacing = '0px';
+      ty += 12 + 14;
+    }
+    if(titleLines.length){
+      ctx.font = '400 64px "Bebas Neue", sans-serif';
+      if(supportsLS) ctx.letterSpacing = '1.9px';
+      ctx.fillStyle = C.text;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for(const line of titleLines){ ctx.fillText(line, cx, ty); ty += 65; }
+      if(supportsLS) ctx.letterSpacing = '0px';
+      ty += 6;
+    }
+    if(subLines.length){
+      ctx.font = '500 18px Inter, sans-serif';
+      ctx.fillStyle = C.dim;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for(const line of subLines){ ctx.fillText(line, cx, ty); ty += 27; }
+    }
+
+    if(!isMatch){
+      drawHexSlot(ctx, soloData.profile, cx - C.hex.lg / 2, contentTop, C.hex.lg);
+      const gridTop = contentTop + lgH + 34;
+      const rowW = 5 * C.hex.sm + 4 * C.gap.sm;
+      const r1x = cx - rowW / 2;
+      const r2x = r1x + (C.hex.sm + C.gap.sm) / 2;
+      const r2y = gridTop + smH - smH * 0.26;
+      soloData.team.forEach((s, i) => {
+        const inRow2 = i >= 5;
+        const x = (inRow2 ? r2x : r1x) + (i % 5) * (C.hex.sm + C.gap.sm);
+        const yy = inRow2 ? r2y : gridTop;
+        drawHexSlot(ctx, s, x, yy, C.hex.sm);
+        if(s.tag) drawPickTag(ctx, x + C.hex.sm / 2, yy, s.tag);
+      });
+    } else {
+      const panelW = 3 * C.hex.xs + 2 * C.gap.xs;
+      ctx.font = '400 40px "Bebas Neue", sans-serif';
+      const vsW = ctx.measureText('VS').width;
+      const startX = cx - (panelW * 2 + 48 * 2 + vsW) / 2;
+      const panelXs = [startX, startX + panelW + 48 + vsW + 48];
+      ctx.fillStyle = C.gold;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('VS', startX + panelW + 48 + vsW / 2, contentTop + mdH / 2 - 20);
+      matchData.forEach((p, idx) => {
+        const pxL = panelXs[idx];
+        const pcx = pxL + panelW / 2;
+        drawHexSlot(ctx, p.profile, pcx - C.hex.md / 2, contentTop, C.hex.md);
+        const nameY = contentTop + mdH + 10;
+        if(p.name){
+          ctx.font = '700 18px Inter, sans-serif';
+          ctx.fillStyle = C.text;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(p.name, pcx, nameY);
+        }
+        const gridTop = nameY + 22 + 22;
+        const r1x = pxL;
+        const r2x = pxL + (C.hex.xs + C.gap.xs) / 2;
+        const r2y = gridTop + xsH - xsH * 0.26;
+        p.team.forEach((s, i) => {
+          const inRow2 = i >= 3;
+          const x = (inRow2 ? r2x : r1x) + (i % 3) * (C.hex.xs + C.gap.xs);
+          drawHexSlot(ctx, s, x, inRow2 ? r2y : gridTop, C.hex.xs);
+        });
+      });
+    }
+    return cv;
+  }
+
   document.getElementById('exportBtn').addEventListener('click', async () => {
     const btn = document.getElementById('exportBtn');
     const original = btn.textContent;
     btn.textContent = '⏳ Export en cours…';
     btn.disabled = true;
     try{
-      const canvas = await html2canvas(document.getElementById('exportCard'), {
-        backgroundColor: null,
-        useCORS: true,
-        scale: 2
-      });
+      const canvas = await renderExportCanvas();
       const title = mainTitleEl.textContent.trim();
       const filename = (title ? title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') : 'draft-league-visuel') + '.png';
       const link = document.createElement('a');
